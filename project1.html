@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <title>Park Maintenance Tracker</title>
+    <style>
+        :root {
+            --bg: #eef5f0;
+            --card: #fff;
+            --tx: #1d2a1f;
+            --mu: #667a69;
+            --ac: #1f8a4c;
+            --bd: #d4e3d7;
+            --hd: linear-gradient(135deg, #1b6b3a, #0e7490);
+            box-sizing: border-box;
+            padding-top: env(safe-area-inset-top, 0px);
+            padding-bottom: env(safe-area-inset-bottom, 0px)
+        }
+
+        @media(prefers-color-scheme:dark) {
+            :root:not([data-theme="light"]) {
+                --bg: #111611;
+                --card: #1b231c;
+                --tx: #e8efe8;
+                --mu: #9aa89b;
+                --ac: #5cc283;
+                --bd: #2b372c;
+                --hd: linear-gradient(135deg, #134e2a, #155e75);
+                color-scheme: dark
+            }
+        }
+
+        :root[data-theme="dark"] {
+            --bg: #111611;
+            --card: #1b231c;
+            --tx: #e8efe8;
+            --mu: #9aa89b;
+            --ac: #5cc283;
+            --bd: #2b372c;
+            --hd: linear-gradient(135deg, #134e2a, #155e75);
+            color-scheme: dark
+        }
+
+- {
+            box-sizing: border-box
+        }
+
+        body {
+            margin: 0;
+            background: var(--bg);
+            color: var(--tx);
+            font: 15px system-ui, sans-serif
+        }
+
+        main {
+            max-width: 760px;
+            margin: auto;
+            padding: 16px
+        }
+
+        h1 {
+            font-size: 22px;
+            margin: 4px 0 12px;
+            padding: 14px 16px;
+            border-radius: 12px;
+            background: var(--hd);
+            color: #fff
+        }
+
+        nav {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+            margin-bottom: 14px
+        }
+
+        button,
+        select,
+        input,
+        textarea {
+            font: inherit;
+            color: var(--tx);
+            background: var(--card);
+            border: 1px solid var(--bd);
+            border-radius: 8px;
+            padding: 8px
+        }
+
+        button {
+            cursor: pointer
+        }
+
+        button.on,
+        button.p {
+            background: var(--ac);
+            color: #fff;
+            border-color: var(--ac)
+        }
+
+        .c {
+            background: var(--card);
+            border: 1px solid var(--bd);
+            border-left: 4px solid var(--ac);
+            border-radius: 12px;
+            padding: 12px;
+            margin-bottom: 10px
+        }
+
+        .c img {
+            max-width: 100%;
+            max-height: 180px;
+            border-radius: 8px;
+            margin-top: 6px
+        }
+
+        label {
+            display: block;
+            margin: 8px 0 3px;
+            color: var(--mu);
+            font-size: 13px
+        }
+
+        input,
+        select,
+        textarea {
+            width: 100%
+        }
+
+        .tag {
+            font-size: 12px;
+            padding: 2px 8px;
+            border-radius: 99px;
+            border: 1px solid transparent;
+            font-weight: 600
+        }
+
+        .s-Open {
+            background: #fee2e2;
+            color: #c0392b
+        }
+
+        .s-Assigned,
+        .s-Progress {
+            background: #fef3c7;
+            color: #d68910
+        }
+
+        .s-Resolved {
+            background: #dcfce7;
+            color: var(--ac)
+        }
+
+        .row {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap
+        }
+
+        .row>* {
+            flex: 1;
+            min-width: 130px
+        }
+
+        .bar {
+            height: 10px;
+            background: linear-gradient(90deg, var(--ac), #0ea5e9);
+            border-radius: 5px;
+            min-width: 2px
+        }
+
+        .m {
+            color: var(--mu);
+            font-size: 13px
+        }
+    </style>
+</head>
+
+<body>
+    <main>
+        <h1>🌳 Public Park Maintenance Tracker</h1>
+        <nav id="nav"></nav>
+        <div id="v"></div>
+    </main>
+    <script>
+        const CATS = ["Broken equipment", "Litter / waste", "Lighting", "Damaged path", "Vandalism", "Overgrown plants", "Other"],
+            ST = ["Open", "Assigned", "Progress", "Resolved"], STAFF = ["Unassigned", "Ravi (Gardener)", "Simran (Electrician)", "Amit (Civil Team)"],
+            PARKS = [["Gandhi Park", "Main Road"], ["Lake View Park", "Sector 5"], ["Children Garden", "Old Town"], ["Green Valley Park", "Phase 2"]];
+        let D, tab = "Parks", flt = "All";
+        try { D = JSON.parse(localStorage.getItem("ptrk")) } catch (e) { }
+        D = D || { issues: [] };
+        const save = () => { try { localStorage.setItem("ptrk", JSON.stringify(D)) } catch (e) { alert("Storage full - photo not saved") } };
+        const $ = id => document.getElementById(id);
+        const esc = s => String(s || "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+        function img(file) { return new Promise(r => { if (!file) return r(""); const f = new FileReader(); f.onload = () => { const i = new Image(); i.onload = () => { const k = Math.min(1, 500 / i.width), c = document.createElement("canvas"); c.width = i.width * k; c.height = i.height * k; c.getContext("2d").drawImage(i, 0, 0, c.width, c.height); r(c.toDataURL("image/jpeg", .6)) }; i.src = f.result }; f.readAsDataURL(file) }) }
+        function nav() { $("nav").innerHTML = ["Parks", "Report", "Issues", "Analytics"].map(t => `<button class="${t == tab ? "on" : ""}" onclick="tab='${t}';draw()">${t}</button>`).join("") }
+        function parks() {
+            return PARKS.map(([n, a]) => {
+                const i = D.issues.filter(x => x.park == n), o = i.filter(x => x.status != "Resolved").length;
+                return `<div class="c"><b>${n}</b> <span class="m">· ${a}</span><div class="m">${i.length} reports · ${o} unresolved</div><button style="margin-top:8px" onclick="tab='Report';draw();$('park').value='${n}'">Report issue</button></div>`
+            }).join("")
+        }
+        function report() {
+            return `<div class="c"><label>Park</label><select id="park">${PARKS.map(p => `<option>${p[0]}</option>`)}</select>
+<label>Category</label><select id="cat">${CATS.map(c => `<option>${c}</option>`)}</select>
+<label>Title</label><input id="ti" placeholder="e.g. Swing chain broken">
+<label>Location in park</label><div class="row"><input id="loc" placeholder="e.g. near north gate"><button onclick="gps()">📍 Use GPS</button></div>
+<label>Description</label><textarea id="de" rows="3"></textarea>
+<label>Photo</label><input id="ph" type="file" accept="image/*">
+<button class="p" style="margin-top:12px" onclick="add()">Submit report</button></div>`}
+        function gps() { navigator.geolocation?.getCurrentPosition(p => $("loc").value = p.coords.latitude.toFixed(5) + ", " + p.coords.longitude.toFixed(5), () => alert("GPS unavailable")) }
+        async function add() {
+            if (!$("ti").value.trim()) return alert("Please add a title");
+            D.issues.unshift({ id: Date.now(), park: $("park").value, cat: $("cat").value, title: $("ti").value, loc: $("loc").value, desc: $("de").value, photo: await img($("ph").files[0]), status: "Open", who: STAFF[0], date: new Date().toLocaleDateString(), note: "", proof: "", fb: null });
+            save(); tab = "Issues"; draw()
+        }
+        function issues() {
+            const L = D.issues.filter(x => flt == "All" || x.status == flt);
+            return `<select onchange="flt=this.value;draw()" style="margin-bottom:10px">${["All", ...ST].map(s => `<option ${s == flt ? "selected" : ""}>${s}</option>`)}</select>` +
+                (L.map(x => `<div class="c"><b>${esc(x.title)}</b> <span class="tag s-${x.status}">${x.status}</span>
+<div class="m">${esc(x.park)} · ${esc(x.cat)} · ${x.date}${x.loc ? " · 📍" + esc(x.loc) : ""}</div><p>${esc(x.desc)}</p>${x.photo ? `<img src="${x.photo}">` : ""}
+<div class="row" style="margin-top:8px"><div><label>Assigned to</label><select onchange="up(${x.id},'who',this.value)">${STAFF.map(s => `<option ${s == x.who ? "selected" : ""}>${s}</option>`)}</select></div>
+<div><label>Status</label><select onchange="up(${x.id},'status',this.value)">${ST.map(s => `<option ${s == x.status ? "selected" : ""}>${s}</option>`)}</select></div></div>
+${x.status == "Resolved" ? res(x) : ""}</div>`).join("") || `<p class="m">No issues found.</p>`)
+        }
+        function res(x) {
+            return `<hr style="border:0;border-top:1px solid var(--bd)"><b>Resolution evidence</b>
+${x.proof ? `<img src="${x.proof}">` : `<input type="file" accept="image/*" onchange="proof(${x.id},this.files[0])">`}
+<input value="${esc(x.note)}" placeholder="Work done note" onchange="up(${x.id},'note',this.value)" style="margin-top:6px">
+<div style="margin-top:8px"><b>Resident feedback</b> ${x.fb ? `<div>${"★".repeat(x.fb.r)}${"☆".repeat(5 - x.fb.r)} <span class="m">${esc(x.fb.t)}</span></div>` :
+                    `<div class="row"><select id="r${x.id}">${[5, 4, 3, 2, 1].map(n => `<option value="${n}">${"★".repeat(n)}</option>`)}</select><input id="t${x.id}" placeholder="Comment"><button onclick="fb(${x.id})">Send</button></div>`}</div>`
+        }
+        function up(id, k, v) { D.issues.find(x => x.id == id)[k] = v; if (k == "who" && v != STAFF[0]) { const i = D.issues.find(x => x.id == id); if (i.status == "Open") i.status = "Assigned" } save(); draw() }
+        async function proof(id, f) { D.issues.find(x => x.id == id).proof = await img(f); save(); draw() }
+        function fb(id) { D.issues.find(x => x.id == id).fb = { r: +$("r" + id).value, t: $("t" + id).value }; save(); draw() }
+        function stats() {
+            const I = D.issues, n = I.length; if (!n) return `<p class="m">No data yet. Submit a report first.</p>`;
+            const bar = (l, v, m) => `<div style="margin:6px 0"><div class="m">${l} (${v})</div><div class="bar" style="width:${v / m * 100}%"></div></div>`,
+                G = (a, f) => a.map(k => [k, I.filter(x => f(x) == k).length]), fbs = I.filter(x => x.fb), avg = fbs.length ? (fbs.reduce((s, x) => s + x.fb.r, 0) / fbs.length).toFixed(1) : "–",
+                done = I.filter(x => x.status == "Resolved").length;
+            return `<div class="row"><div class="c"><b>${n}</b><div class="m">Total reports</div></div><div class="c"><b>${Math.round(done / n * 100)}%</b><div class="m">Resolved</div></div><div class="c"><b>${avg} ★</b><div class="m">Avg feedback</div></div></div>
+<div class="c"><b>By status</b>${G(ST, x => x.status).map(([k, v]) => bar(k, v, n)).join("")}</div>
+<div class="c"><b>By category</b>${G(CATS, x => x.cat).filter(a => a[1]).map(([k, v]) => bar(k, v, n)).join("")}</div>
+<div class="c"><b>By park</b>${G(PARKS.map(p => p[0]), x => x.park).map(([k, v]) => bar(k, v, n)).join("")}</div>`
+        }
+        function draw() { nav(); $("v").innerHTML = { Parks: parks, Report: report, Issues: issues, Analytics: stats }[tab]() }
+        draw();
+    </script>
+</body>
+
+</html>
